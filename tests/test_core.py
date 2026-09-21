@@ -5,11 +5,12 @@ import tempfile
 import unittest
 import wave
 from pathlib import Path
+from unittest.mock import patch
 
-from interviewlens.analysis.report import render_general_report, render_report
-from interviewlens.asr.funasr_common import clean_asr_text, compact_segments, parse_result
-from interviewlens.audio.ffmpeg import FFmpegProcessor
-from interviewlens.models.transcript import Transcript, TranscriptSegment
+from lingyezhou.analysis.report import render_general_report, render_qa_answer, render_qa_conversation, render_report
+from lingyezhou.asr.funasr_common import clean_asr_text, compact_segments, parse_result
+from lingyezhou.audio.ffmpeg import FFmpegProcessor
+from lingyezhou.models.transcript import Transcript, TranscriptSegment
 
 
 def passthrough(value: str) -> str:
@@ -30,8 +31,38 @@ class AudioTests(unittest.TestCase):
             self.assertAlmostEqual(info.duration_seconds, 1.0)
             self.assertEqual(processor.convert(source), source.resolve())
 
+    def test_cloud_upload_preserves_supported_audio_and_compresses_unsupported_format(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mp3 = root / "small.mp3"
+            mp3.write_bytes(b"ID3 fixture")
+            processor = FFmpegProcessor()
+            self.assertEqual(processor.prepare_cloud_upload(mp3, "standard"), mp3.resolve())
+
+            flac = root / "recording.flac"
+            flac.write_bytes(b"fLaC fixture")
+            target = root / "upload.mp3"
+
+            def create_output(command, **kwargs):
+                Path(command[-1]).write_bytes(b"compressed")
+
+            with patch.object(processor, "require_available"), patch("lingyezhou.audio.ffmpeg.subprocess.run", side_effect=create_output) as run:
+                result = processor.prepare_cloud_upload(flac, "flash", target)
+            self.assertEqual(result, target.resolve())
+            self.assertIn("libmp3lame", run.call_args.args[0])
+            self.assertIn("64k", run.call_args.args[0])
+
 
 class TranscriptTests(unittest.TestCase):
+    def test_transcript_roundtrip(self) -> None:
+        original = Transcript(
+            "meeting.wav", 5000,
+            [TranscriptSegment(100, 900, 2, "内容")],
+            {2: "客户"}, ["术语"],
+        )
+        restored = Transcript.from_dict(original.to_dict())
+        self.assertEqual(restored.to_dict(), original.to_dict())
+
     def test_parse_funasr_sentence_info(self) -> None:
         result = [{"sentence_info": [
             {"start": 1200, "end": 2500, "spk": 0, "text": "介绍一下 FreeRTOS"},
@@ -104,6 +135,20 @@ class TranscriptTests(unittest.TestCase):
         }, transcript)
         for value in ("项目周会", "主要话题", "决策与结论", "补充测试", "小王", "周四"):
             self.assertIn(value, report)
+
+    def test_recording_qa_report_keeps_evidence_and_notice(self) -> None:
+        answer = {
+            "answer": "录音明确提到周五答复。",
+            "evidence": [{"time": "03:12", "quote": "周五给你答复", "meaning": "说明答复时间"}],
+            "uncertainties": ["未说明补偿金额"],
+            "suggested_actions": ["回听并核对日期"],
+            "professional_notice": "劳动规则取决于地区和事件日期，建议向当地专业人士核实。",
+        }
+        markdown = render_qa_answer("对方承诺了什么？", answer)
+        conversation = render_qa_conversation([{"question": "对方承诺了什么？", "answer": answer}])
+        for text in ("03:12", "周五给你答复", "未说明补偿金额", "建议向当地专业人士核实"):
+            self.assertIn(text, markdown)
+            self.assertIn(text, conversation)
 
 
 if __name__ == "__main__":

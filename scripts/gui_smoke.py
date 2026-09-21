@@ -11,8 +11,8 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
 
-from interviewlens.logging_config import configure_logging
-from interviewlens.ui.main_window import MainWindow
+from lingyezhou.logging_config import configure_logging
+from lingyezhou.ui.main_window import MainWindow
 
 
 configure_logging()
@@ -22,8 +22,8 @@ for filename in ("msyh.ttc", "msyhbd.ttc", "segoeui.ttf"):
     if font_path.exists():
         QFontDatabase.addApplicationFont(str(font_path))
 window = MainWindow()
-if os.environ.get("INTERVIEWLENS_SMOKE_DEMO"):
-    from interviewlens.models.transcript import Transcript, TranscriptSegment
+if os.environ.get("LINGYEZHOU_SMOKE_DEMO"):
+    from lingyezhou.models.transcript import Transcript, TranscriptSegment
     window.transcript = Transcript("产品讨论（界面演示）.m4a", 192000, [
         TranscriptSegment(12000, 28000, 0, "今天主要讨论录音工具的使用体验。我们希望导入文件后，能够快速找到重点，也能保留完整的原始记录。"),
         TranscriptSegment(31000, 54000, 1, "我建议把原文和 AI 整理分开。阅读原文时保留时间和说话人，整理页则集中展示结论与待办。"),
@@ -32,10 +32,14 @@ if os.environ.get("INTERVIEWLENS_SMOKE_DEMO"):
     window._populate_roles()
     window._refresh_transcript()
     window._update_llm_state()
-if os.environ.get("INTERVIEWLENS_SMOKE_COMPACT"):
+if os.environ.get("LINGYEZHOU_SMOKE_COMPACT"):
     window.resize(980, 680)
+if tab := os.environ.get("LINGYEZHOU_SMOKE_TAB"):
+    window.tabs.setCurrentIndex(int(tab))
+if ai_tab := os.environ.get("LINGYEZHOU_SMOKE_AI_TAB"):
+    window.ai_tabs.setCurrentIndex(int(ai_tab))
 window.show()
-if screenshot := os.environ.get("INTERVIEWLENS_SMOKE_SCREENSHOT"):
+if screenshot := os.environ.get("LINGYEZHOU_SMOKE_SCREENSHOT"):
     QTimer.singleShot(250, lambda: window.grab().save(screenshot))
 QTimer.singleShot(500, app.quit)
 raise SystemExit(app.exec())

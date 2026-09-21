@@ -22,3 +22,4 @@ logs/*
 build/
 dist/
 *.spec
+!packaging/lingyezhou.spec

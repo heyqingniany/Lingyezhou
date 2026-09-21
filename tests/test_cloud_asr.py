@@ -5,9 +5,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from urllib.error import URLError
 
-from interviewlens.asr.base import ASRError
-from interviewlens.asr.doubao import DoubaoBackend
-from interviewlens.config import AppConfig
+from lingyezhou.asr.base import ASRError
+from lingyezhou.asr.doubao import DoubaoBackend
+from lingyezhou.config import AppConfig
 
 
 def response_data():
@@ -23,8 +23,18 @@ def response_data():
 
 
 class CloudTests(unittest.TestCase):
-    @patch("interviewlens.asr.doubao.time.sleep")
-    @patch("interviewlens.asr.doubao.urlopen")
+    def test_file_size_limits_follow_selected_cloud_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "large.mp3"
+            with path.open("wb") as stream:
+                stream.seek(100_000_000)
+                stream.write(b"0")
+            with self.assertRaises(ASRError):
+                DoubaoBackend(api_key="key", mode="flash").validate_audio(path)
+            DoubaoBackend(api_key="key", mode="standard").validate_audio(path)
+
+    @patch("lingyezhou.asr.doubao.time.sleep")
+    @patch("lingyezhou.asr.doubao.urlopen")
     def test_standard_submits_once_then_polls(self, mocked, sleep):
         from contextlib import ExitStack
         from unittest.mock import mock_open
@@ -68,7 +78,7 @@ class CloudTests(unittest.TestCase):
         with self.assertRaises(ASRError):
             DoubaoBackend.parse_response(data, "demo.wav")
 
-    @patch("interviewlens.asr.doubao.urlopen")
+    @patch("lingyezhou.asr.doubao.urlopen")
     def test_request_auth_and_cloud_failures(self, mocked):
         response = MagicMock()
         response.headers = {"X-Api-Status-Code": "20000000"}

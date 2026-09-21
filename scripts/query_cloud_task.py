@@ -7,8 +7,8 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from interviewlens.config import AppConfig
-from interviewlens.asr.doubao import DoubaoBackend
+from lingyezhou.config import AppConfig
+from lingyezhou.asr.doubao import DoubaoBackend
 
 
 def main():

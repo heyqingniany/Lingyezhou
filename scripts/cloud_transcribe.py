@@ -8,9 +8,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from interviewlens.asr.doubao import DoubaoBackend
-from interviewlens.audio.ffmpeg import FFmpegProcessor
-from interviewlens.config import AppConfig
+from lingyezhou.asr.doubao import DoubaoBackend
+from lingyezhou.audio.ffmpeg import FFmpegProcessor
+from lingyezhou.config import AppConfig
 
 
 def main() -> int:

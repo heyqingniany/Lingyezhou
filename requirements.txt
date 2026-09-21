@@ -5,3 +5,5 @@ torch>=2.2
 torchaudio>=2.2
 openai>=1.50,<3
 imageio-ffmpeg>=0.6,<1
+filelock>=3.13,<5
+faster-whisper>=1.2,<2
